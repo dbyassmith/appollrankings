@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AP Poll NCAA Football Rankings</title>
+  <script type="text/javascript" src="http://mbostock.github.com/d3/d3.v2.js"></script>
+  <script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+  <script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
+  <script src="d3.slider.js"></script>
+  <link href='http://fonts.googleapis.com/css?family=Raleway' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css">
+  <link rel="stylesheet" href="d3.slider.css">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <style>
+    body   { color: #444; font-family: 'Raleway', sans-serif; }
+    h1     { font-size: 28px; font-weight: normal; text-shadow: #fff 0 1px 0; margin: 0 0 0 0; padding: 0; }
+    small  { color: #a3a3a3; font-size: 12px; position: absolute; bottom: -1.8em; left: 0;}
+    a      { color: #a3a3a3; }
+    span.label_year:hover { cursor: ew-resize; }
+    .label_year{display:none;}
+    text.label { font-size:12px; fill: #FFF; width:50px; }
+    text.label { text-anchor: left; }
+    .year_label { font-size: 12px; font-weight: bold;}
+    #dod-wrapper{ 
+      position:absolute;
+      width:350px;
+      right:0px;
+      top:0px;
+      background:#ccc;
+      height:100%;
+    }
+    #dod{
+      position: relative;
+      font-weight:bold;
+      padding:20px;
+      text-align: center;
+    }
+    #slider { margin: 10px; width:700px;}
+    .over text.label {font-weight: bold; }
+    .over line.slope,.over line.slope2,.over line.slope3,.over line.slope4 {  stroke-width: 2; }
+    #fail-slide{color:#CCC; font-size: 11px; margin-top:30px;display:none;}
+    #slider {width:900px;clear:both;}
+    .tooltip{fontt-family: Verdana,Arial,sans-serif; position: absolute;top:-20px; font-size: 11px; color:#444;}
+    .slider-close{ width:20px; background:#444; height:100%; position:absolute;}
+  </style>
+</head>
+<body>
+  <header>
+    <h1 title="Move your mouse over years to change range...">
+     AP Poll NCAA Football Rankings </h1>
+  </header>
+  <div id="chart"></div>
+</body>
+
+<script>
+d3.csv("rankings.csv", function(csv) {
+  data = csv;
+  
+  // Extract years from the dataset
+  var years = d3.keys(csv[0]).filter( function(d) { return d.match(/^\d/) }), // Return numerical keys
+    // Extract names of schools from the dataset
+    schools = csv.map( function(d) { return d["School"] }),
+
+        font_size = 11,
+        margin    = 20,
+        width     = 1200,
+        height    = 520,
+        viz_top_margin = 25,
+        column_width = 130,
+        column_margin = 80,
+        numformat = d3.format(".1f"),
+        ui_scale=2.6,
+        rect_height=18,
+        year1 = 0;
+        year2 = 0;
+        year3 = 0;
+        year4 = 0;
+        year5 = 0;
+
+        chart     = d3.select("#chart").append("svg")
+                   .attr("width",  width)
+                   .attr("height", height);
+
+    // Scales
+  var y = d3.scale.linear()
+    .domain([0, schools.length])
+    .range([margin, height]);
+    var slope = d3.scale.linear()
+    .domain( [0, 10] )
+    .range([margin, height]);
+    var year_scale = d3.scale.linear()
+    .domain([ parseInt(d3.first(years)), parseInt(d3.last(years)) ])
+    .clamp(true);
+
+
+
+
+    // Update the chart graphics based on new data for selected year
+    var update = function(start) {
+    // Extract School names and first/end values first the dataset
+      d3.selectAll("rect").remove();
+      d3.selectAll("text.label").remove();
+      d3.selectAll("text.year_label").remove();
+      
+      var data  = csv.map( function(d) {
+        year1 = start;
+        year2 = start+1;
+        year3 = start+2;
+        year4 = start+3;
+        year5 = start+4;
+        var r = {
+          label: d["School"],
+          color: d["Color 1"],
+          nickname: d["Nickname"],
+          cur_conf: d["Current Conference"],
+          first: parseFloat(d[start]),
+		  first_pos: parseFloat(d["X " + start]),
+          second: parseFloat(d[start+1]),
+		  second_pos: parseFloat(d["X " + (start+1)]),
+          third: parseFloat(d[start+2]),
+		  third_pos: parseFloat(d["X " + (start+2)]),
+          fourth: parseFloat(d[start+3]),
+		  fourth_pos: parseFloat(d["X " + (start+3)]),
+          fifth: parseFloat(d[start+4]),
+		  fifth_pos: parseFloat(d["X " + (start+4)]),
+        };
+        return r;
+      })
+      // Sort in descending order
+          data.sort( function(a,b) {
+        if (d3.max([a.first, a.second]) > d3.max([b.first, b.second])) {return -1;}
+        else if (d3.max([a.first, a.second]) < d3.max([b.first, b.second])) {return 1;}
+        else {return 0;}
+      });
+        // Compute the minimum and maximum value in the dataset
+      var extent = [ csv.map(function(d) {
+        return d3.entries(d)
+        .filter(function(d) { return d.key.match(/^\d/) })
+        .map(function(d) { return d.value })
+      }) ];
+
+    // Schools
+    var School = chart.selectAll("g.School")
+      .data( data );
+    School.enter().append("g")
+      .attr("class", "School");
+    School
+      .on("mouseover", function(d,i) { 
+        d3.select(this).classed("over", true); 
+        
+        var currentSchool = this;
+        d3.selectAll("g.School").style("opacity",function(){
+          return  (this === currentSchool) ? 1 : 0.3;
+        });
+      })
+      .on("mouseout",  function(d,i) { 
+        d3.select(this).classed("over", false); 
+        d3.selectAll("text.label.second, text.label.first").transition().duration(500).style("opacity",1);
+        d3.selectAll("g.School").style("opacity",1);
+      });
+    School.on("click",function(d,i){
+      d3.select("#school-name").text(d.label);
+      d3.select("#nickname").text(d.nickname);
+      d3.select("#cur_conf").text(d.cur_conf);
+
+
+    });
+
+    var first_column_rect = School.selectAll("rect.first")
+      .data( function(d){return [d]; });
+    first_column_rect.enter()
+      .append("rect")
+      .classed("rect first", true)
+      .attr("xml:space", "preserve")
+      .attr("x", 30)
+      .attr("y", function(d,i) { return d.first ? slope(d.first_pos)/ui_scale-4: -1000;}) 
+      .attr("width",column_width+10)
+      .attr("height",rect_height)
+      .attr("fill", function(d) { return d.color;});
+    // ** First column
+    var first_column = School.selectAll("text.label.first")
+      .data( function(d) { return [d]; } );
+    first_column.enter()
+      .append("text")
+      .classed("label first", true)
+      .attr("xml:space", "preserve")
+      .style("width",50)
+      .style("font-size", font_size)
+      .attr("x", 40);
+    first_column
+            .attr("y", function(d,i) { return d.first ? slope(d.first_pos)/ui_scale +10: -1000; })
+            .text(function(d) { return d.first+ ".  " + d.label; });
+     
+     var year1_label = d3.select("svg")
+        .append("text")
+        .attr("x", 80)
+        .attr("y", 15)
+        .attr("class","year_label")
+        .text(year1);
+
+    var second_column_rect = School.selectAll("rect.second")
+      .data( function(d){return [d]; });
+    second_column_rect.enter()
+      .append("rect")
+      .classed("rect second", true)
+      .attr("xml:space", "preserve")
+      .attr("x",column_width+column_margin+30)
+      .attr("y", function(d,i) { return d.second ? slope(d.second_pos)/ui_scale-4: -1000;}) 
+      .attr("width",column_width+10)
+      .attr("height",rect_height)
+      .attr("fill", function(d) { return d.color;});
+    // ** Second column
+    var second_column = School.selectAll("text.label.second")
+      .data( function(d) { return [d]; } );
+    second_column.enter().append("text")
+      .classed("label second", true)
+      .attr("xml:space", "preserve")
+      .style("font-size", font_size)
+      .attr("x", column_width+column_margin+40)
+    second_column
+      .attr("y", function(d,i) { return d.second ? slope(d.second_pos)/ui_scale +10: -1000; })
+      .text(function(d) { return d.second+ ". " + d.label; });
+
+      var year2_label = d3.select("svg")
+        .append("text")
+        .attr("x", column_width+column_margin+80)
+        .attr("y", 15)
+        .attr("class","year_label")
+        .text(year2);
+
+      var third_column_rect = School.selectAll("rect.third")
+      .data( function(d){return [d]; });
+    third_column_rect.enter()
+      .append("rect")
+      .classed("rect third", true)
+      .attr("xml:space", "preserve")
+      .attr("x",2*column_width+2*column_margin+30)
+      .attr("y", function(d,i) { return d.third ? slope(d.third_pos)/ui_scale-4: -1000;}) 
+      .attr("width",column_width+10)
+      .attr("height",rect_height)
+      .attr("fill", function(d) { return d.color;});
+
+
+      var third_column = School.selectAll("text.label.third")
+      .data( function(d) { return [d]; } );
+    third_column.enter().append("text")
+      .classed("label third", true)
+      .style("font-size", font_size)
+      .attr("x", 2*column_width+2*column_margin+40)
+    third_column
+      .attr("y", function(d,i) { return d.third ? slope(d.third_pos)/ui_scale+10 : -1000;})
+      .text(function(d) { return d.third+ ". " + d.label; });
+
+      var year3_label = d3.select("svg")
+        .append("text")
+        .attr("x", 2*column_width+2*column_margin+80)
+        .attr("y", 15)
+        .attr("class","year_label")
+        .text(year3);
+
+      var fourth_column_rect = School.selectAll("rect.fourth")
+      .data( function(d){return [d]; });
+    fourth_column_rect.enter()
+      .append("rect")
+      .classed("rect fourth", true)
+      .attr("xml:space", "preserve")
+      .attr("x",3*column_width+3*column_margin+30)
+      .attr("y", function(d,i) { return d.fourth ? slope(d.fourth_pos)/ui_scale-4: -1000;}) 
+      .attr("width",column_width+10)
+      .attr("height",rect_height)
+      .attr("fill", function(d) { return d.color;});
+
+      var fourth_column = School.selectAll("text.label.fourth")
+      .data( function(d) { return [d]; } );
+    fourth_column.enter().append("text")
+      .classed("label fourth", true)
+      .attr("xml:space", "preserve")
+      .style("font-size", font_size)
+      .attr("x", 3*column_width+3*column_margin+40)
+    fourth_column
+      .attr("y", function(d,i) { return d.fourth ? slope(d.fourth_pos)/ui_scale+10 : -1000; })
+      .text(function(d) { return d.fourth+ ". " + d.label; });
+
+      var year4_label = d3.select("svg")
+        .append("text")
+        .attr("x", 3*column_width+3*column_margin+80)
+        .attr("y", 15)
+        .attr("class","year_label")
+        .text(year4);
+
+    fourth_column.enter().append("text");
+
+    var fifth_column_rect = School.selectAll("rect.fifth")
+      .data( function(d){return [d]; });
+    fifth_column_rect.enter()
+      .append("rect")
+      .classed("rect fifth", true)
+      .attr("xml:space", "preserve")
+      .attr("x",4*column_width+4*column_margin+30)
+      .attr("y", function(d,i) { return d.fifth ? slope(d.fifth_pos)/ui_scale-4: -1000;}) 
+      .attr("width",column_width+10)
+      .attr("height",rect_height)
+      .attr("fill", function(d) { return d.color;});
+
+      var fifth_column = School.selectAll("text.label.fifth")
+      .data( function(d) { return [d]; } );
+    fifth_column.enter().append("text")
+      .classed("label fifth", true)
+      .attr("xml:space", "preserve")
+      .style("font-size", font_size)
+      .attr("x", 4*column_width+4*column_margin+40)
+    fifth_column
+      .attr("y", function(d,i) { return d.fifth ? slope(d.fifth_pos)/ui_scale+10 : -1000; })
+      .text(function(d) { return d.fifth+ ". " + d.label; });
+
+      var year5_label = d3.select("svg")
+        .append("text")
+        .attr("x", 4*column_width+4*column_margin+80)
+        .attr("y", 15)
+        .attr("class","year_label")
+        .text(year5);
+
+    fifth_column.enter().append("text");
+
+    var line = School.selectAll("line.slope")
+      .data( function(d) { return [d]; } );
+    line.enter().append("line")
+      .attr("x1", column_width+40)
+      .attr("x2", column_width+column_margin+30)
+      .attr("opacity", 0)
+      .attr("y1", 0)
+      .attr("y2", 0);
+    line
+      .classed("slope", function(d) { return d.first || d.second; })
+      .attr("opacity", 1)
+      .attr("stroke", function(d,i){
+            var s = slope(d.first)/slope(d.second);
+        
+            if(s>1){
+                return "green";
+            }
+            else if(s==1){
+                return "black";
+            }
+            else{
+                return "red";
+            }
+      })
+      .attr("y1", function(d,i) { return d.first && d.second ? Math.round( slope(d.first)/ui_scale - font_size/2 + 2)+10 : -1000; })
+      .attr("y2", function(d,i) { return d.first && d.second ? Math.round( slope(d.second)/ui_scale   - font_size/2 + 2)+10 : -1000; });
+    
+    var line2 = School.selectAll("line.slope2")
+      .data( function(d) { return [d]; } );
+    line2.enter().append("line")
+      .attr("x1", (2*column_width)+column_margin+40)
+      .attr("x2", 2*column_width+2*column_margin+30)
+      .attr("opacity", 0)
+      .attr("y1", 0)
+      .attr("y2", 0);
+    line2
+      .classed("slope2", function(d) { return d.second || d.third; })
+      .attr("opacity", 1)
+      .attr("stroke", function(d,i){
+        var s = slope(d.second)/slope(d.third);
+        
+            if(s>1){
+                return "green";
+            }
+            else if(s==1){
+                return "black";
+            }
+            else{
+                return "red";
+            }
+      })
+      .attr("y1", function(d,i) { return d.second && d.third ? Math.round( slope(d.second)/ui_scale - font_size/2 + 2) +10 : -1000; })
+      .attr("y2", function(d,i) { return d.second && d.third ? Math.round( slope(d.third)/ui_scale - font_size/2 + 2) +10 : -1000; });
+
+    var line3 = School.selectAll("line.slope3")
+      .data( function(d) { return [d]; } );
+    line3.enter().append("line")
+      .attr("x1", (3*column_width)+(2*column_margin)+40)
+      .attr("x2", 3*column_width+3*column_margin+30)
+      .attr("opacity", 0)
+      .attr("y1", 0)
+      .attr("y2", 0);
+    line3
+      .classed("slope3", function(d) { return d.third || d.fourth; })
+      .attr("opacity", 1)
+      .attr("stroke", function(d,i){
+            var s = slope(d.third)/slope(d.fourth);
+        
+            if(s>1){
+                return "green";
+            }
+            else if(s==1){
+                return "black";
+            }
+            else{
+                return "red";
+            }
+      })
+      .attr("y1", function(d,i) { return d.third && d.fourth ? Math.round( slope(d.third)/ui_scale - font_size/2 + 2) +10 : -1000; })
+      .attr("y2", function(d,i) { return d.third && d.fourth ? Math.round( slope(d.fourth)/ui_scale   - font_size/2 + 2) +10 : -1000; });
+
+      var line4 = School.selectAll("line.slope4")
+      .data( function(d) { return [d]; } );
+    line4.enter().append("line")
+      .attr("x1", (4*column_width)+(3*column_margin)+40)
+      .attr("x2", 4*column_width+4*column_margin+30)
+      .attr("opacity", 0)
+      .attr("y1", 0)
+      .attr("y2", 0);
+    line4
+      .classed("slope4", function(d) { return d.fourth || d.fifth; })
+      .attr("opacity", 1)
+      .attr("stroke", function(d,i){
+            var s = slope(d.fourth)/slope(d.fifth);
+        
+            if(s>1){
+                return "green";
+            }
+            else if(s==1){
+                return "black";
+            }
+            else{
+                return "red";
+            }
+      })
+      .attr("y1", function(d,i) { return d.fourth && d.fifth ? Math.round( slope(d.fourth)/ui_scale - font_size/2 + 2) +10 : -1000; })
+      .attr("y2", function(d,i) { return d.fourth && d.fifth ? Math.round( slope(d.fifth)/ui_scale   - font_size/2 + 2) +10 : -1000; });
+      
+      return chart;
+    };
+
+    
+
+    // Change year range
+  d3.selectAll(".label_year")
+    .on("mousemove", function() {
+      var $this = d3.select(this),
+        box   = $this.node();
+
+      value  = d3.round(year_scale.range([2, box.offsetWidth-2]).invert(d3.mouse(this)[0]))
+      d3.select(this).text(value)
+
+      if ( d3.select("#first").text() > d3.select("#second").text()   ) {
+        d3.select("#first").text( d3.select("#second").text() )
+      }
+      if ( d3.select("#second").text()   < d3.select("#first").text() ) {
+        d3.select("#second").text( d3.select("#first") )
+      }
+
+      return update( d3.select("#first").text(), d3.select("#second").text() );
+    });
+
+    //var startPos = '$("#slider").slider("value");', endPos = '';
+    d3.select('#slider').call(d3.slider().axis(true).min(1936).max(2013).step(1).on("slide", function(evt, value) {
+      d3.select('#slider3textmin').text(value);
+      update(value); 
+    }));
+
+     d3.select('.d3-slider-handle').append("div").attr("id","slider3textmin").attr("class","tooltip").text(1936);
+
+    
+    return update( 1936);
+});
+</script>
+<div id="dod-wrapper">
+  <div id="dod">
+    <!--<div class="slider-close"></div>-->
+    <h1><div id="school-name"></div>
+    <div id="nickname"></div></h1> 
+    <div id="">Current Conference: <span id="cur_conf"></span></div>
+  </div>
+</div>
+  <div id="slider"></div>
+  <div id="fail-slide">**The Visualization can only handle up to 6 years at one time.</div>
+
+</html>
