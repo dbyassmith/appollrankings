@@ -2,68 +2,13 @@
 <html>
 <head>
   <title>AP Poll NCAA Football Rankings</title>
-  <script type="text/javascript" src="http://mbostock.github.com/d3/d3.v2.js"></script>
-  <script src="http://code.jquery.com/jquery-1.9.1.js"></script>
-  <script src="http://code.jquery.com/ui/1.10.3/jquery-ui.js"></script>
-  <script src="d3.slider.js"></script>
+  <script type="text/javascript" src="js/d3.v2.js"></script>
+  <script src="js/jquery-1.9.1.js"></script>
+  <script src="js/d3.slider.js"></script>
   <link href='http://fonts.googleapis.com/css?family=Raleway' rel='stylesheet' type='text/css'>
-  <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css">
-  <link rel="stylesheet" href="d3.slider.css">
+  <link rel="stylesheet" href="css/d3.slider.css">
+  <link rel="stylesheet" href="css/style.css">
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <style>
-    body   { color: #444; font-family: 'Raleway', sans-serif; }
-    h1     { font-size: 28px; font-weight: bold; text-shadow: #fff 0 1px 0; margin: 0 0 0 0; padding: 0; }
-    small  { color: #a3a3a3; font-size: 12px; position: absolute; bottom: -1.8em; left: 0;}
-    a      { color: #a3a3a3; }
-    h2{
-      font-size: 23px;
-      margin:0px;
-    }
-    .team-info h2{
-      margin: 75px 0 12px 0;
-    }
-    .team-info .row {
-        margin:10px 0;
-    }
-    span.label_year:hover { cursor: ew-resize; }
-    .label_year{display:none;}
-    text.label { font-size:12px; fill: #FFF; width:50px; }
-    text.label { text-anchor: left; }
-    .year_label { font-size: 12px; font-weight: bold;}
-    #dod-wrapper{ 
-      position:absolute;
-      width:350px;
-      right:0px;
-      top:0px;
-      background:#ccc;
-      height:100%;
-      display: none;
-    }
-    #dod{
-      position: relative;
-      font-weight:bold;
-      padding:20px;
-      text-align: center;
-    }
-    #slider { margin: 10px; width:700px;}
-    .over text.label {font-weight: bold; }
-    .over line.slope,.over line.slope2,.over line.slope3,.over line.slope4 {  stroke-width: 2; }
-    #fail-slide{color:#CCC; font-size: 11px; margin-top:30px;display:none;}
-    #slider {width:900px;clear:both;}
-    .tooltip{fontt-family: Verdana,Arial,sans-serif; position: absolute;top:-20px; font-size: 11px; color:#444;}
-    .slider-close{ width:30px; background-color:#444; background-image: url('arrows.png'); background-position:center; background-repeat: no-repeat; height:100%; position:absolute;z-index: 99999;}
-    .color-box{
-      width:20px;
-      height:20px;
-      display: inline-block;
-margin: 0 5px;
-border: 3px solid #888;
-    }
-    .conference-filter{
-      margin-top:35px;
-      z-index:999;
-    }
-  </style>
 </head>
 <body>
   <header>
@@ -203,6 +148,7 @@ d3.csv("rankings.csv", function(csv) {
     School.on("click",function(d,i){
        update(year1,currentYear)
       $("#dod-wrapper").show();
+      $("#dod-wrapper").css("right","0px");
       d3.select("#school-name").text(d.label);
       d3.select("#nickname").text(d.nickname);
       d3.select("#cur_conf").text(d.cur_conf);
@@ -570,8 +516,9 @@ d3.csv("rankings.csv", function(csv) {
     return update( 2009,1936);
 });
 $(document).ready(function(){
-  var state=1;
+  var state=0;
   $(".slider-close").click(function(){
+    console.log(state);
     if(state==0){
     $("#dod-wrapper").css("right","0px");
     state=1;
@@ -596,8 +543,8 @@ $(document).ready(function(){
       <div id="" class="row">Team Colors: <div id="school-color1" class="color-box"></div><div id="school-color2" class="color-box"></div></div>
       <div id="" class="row">Current Conference: <span id="cur_conf"></span></div>
       <div id="" class="row">Current Division: <span id="cur_div"></span></div>
-      <div id="" class="row">Highest Ranking: <span id="highest_rank"></span></div>
-      <div id="" class="row">Number of Times in Rankings: <span id="rank_count"></span></div>
+      <!--<div id="" class="row">Highest Ranking: <span id="highest_rank"></span></div>
+      <div id="" class="row">Number of Times in Rankings: <span id="rank_count"></span></div>-->
     </div>
   </div>
 </div>

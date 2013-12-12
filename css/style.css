@@ -1,0 +1,52 @@
+body   { color: #444; font-family: 'Raleway', sans-serif; overflow-x:hidden; }
+    h1     { font-size: 28px; font-weight: bold; text-shadow: #fff 0 1px 0; margin: 0 0 0 0; padding: 0; }
+    small  { color: #a3a3a3; font-size: 12px; position: absolute; bottom: -1.8em; left: 0;}
+    a      { color: #a3a3a3; }
+    h2{
+      font-size: 23px;
+      margin:0px;
+    }
+    .team-info h2{
+      margin: 75px 0 12px 0;
+    }
+    .team-info .row {
+        margin:10px 0;
+    }
+    span.label_year:hover { cursor: ew-resize; }
+    .label_year{display:none;}
+    text.label { font-size:12px; fill: #FFF; width:50px; }
+    text.label { text-anchor: left; }
+    .year_label { font-size: 12px; font-weight: bold;}
+    #dod-wrapper{ 
+      position:absolute;
+      width:350px;
+      right:-320px;
+      top:0px;
+      background:#ccc;
+      height:100%;
+      display: none;
+    }
+    #dod{
+      position: relative;
+      font-weight:bold;
+      padding:20px;
+      text-align: center;
+    }
+    #slider { margin: 10px; width:700px;}
+    .over text.label {font-weight: bold; }
+    .over line.slope,.over line.slope2,.over line.slope3,.over line.slope4 {  stroke-width: 2; }
+    #fail-slide{color:#CCC; font-size: 11px; margin-top:30px;display:none;}
+    #slider {width:900px;clear:both;}
+    .tooltip{fontt-family: Verdana,Arial,sans-serif; position: absolute;top:-20px; font-size: 11px; color:#444;}
+    .slider-close{ width:30px; background-color:#444; background-image: url('../img/arrows.png'); background-position:center; background-repeat: no-repeat; height:100%; position:absolute;z-index: 99999;}
+    .color-box{
+      width:20px;
+      height:20px;
+      display: inline-block;
+margin: 0 5px;
+border: 3px solid #888;
+    }
+    .conference-filter{
+      margin-top:35px;
+      z-index:999;
+    }
