@@ -12,9 +12,19 @@
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <style>
     body   { color: #444; font-family: 'Raleway', sans-serif; }
-    h1     { font-size: 28px; font-weight: normal; text-shadow: #fff 0 1px 0; margin: 0 0 0 0; padding: 0; }
+    h1     { font-size: 28px; font-weight: bold; text-shadow: #fff 0 1px 0; margin: 0 0 0 0; padding: 0; }
     small  { color: #a3a3a3; font-size: 12px; position: absolute; bottom: -1.8em; left: 0;}
     a      { color: #a3a3a3; }
+    h2{
+      font-size: 23px;
+      margin:0px;
+    }
+    .team-info h2{
+      margin: 75px 0 12px 0;
+    }
+    .team-info .row {
+        margin:10px 0;
+    }
     span.label_year:hover { cursor: ew-resize; }
     .label_year{display:none;}
     text.label { font-size:12px; fill: #FFF; width:50px; }
@@ -27,6 +37,7 @@
       top:0px;
       background:#ccc;
       height:100%;
+      display: none;
     }
     #dod{
       position: relative;
@@ -40,7 +51,18 @@
     #fail-slide{color:#CCC; font-size: 11px; margin-top:30px;display:none;}
     #slider {width:900px;clear:both;}
     .tooltip{fontt-family: Verdana,Arial,sans-serif; position: absolute;top:-20px; font-size: 11px; color:#444;}
-    .slider-close{ width:20px; background:#444; height:100%; position:absolute;}
+    .slider-close{ width:30px; background-color:#444; background-image: url('arrows.png'); background-position:center; background-repeat: no-repeat; height:100%; position:absolute;z-index: 99999;}
+    .color-box{
+      width:20px;
+      height:20px;
+      display: inline-block;
+margin: 0 5px;
+border: 3px solid #888;
+    }
+    .conference-filter{
+      margin-top:35px;
+      z-index:999;
+    }
   </style>
 </head>
 <body>
@@ -70,6 +92,9 @@ d3.csv("rankings.csv", function(csv) {
         numformat = d3.format(".1f"),
         ui_scale=2.6,
         rect_height=18,
+        start_year=2009,
+        filter_state=0
+        filt=d3.select("#conf-select").value;
         year1 = 0;
         year2 = 0;
         year3 = 0;
@@ -95,8 +120,9 @@ d3.csv("rankings.csv", function(csv) {
 
 
     // Update the chart graphics based on new data for selected year
-    var update = function(start) {
+    var update = function(start,click) {
     // Extract School names and first/end values first the dataset
+      d3.selectAll("g.School").attr("class","School");
       d3.selectAll("rect").remove();
       d3.selectAll("text.label").remove();
       d3.selectAll("text.year_label").remove();
@@ -110,8 +136,10 @@ d3.csv("rankings.csv", function(csv) {
         var r = {
           label: d["School"],
           color: d["Color 1"],
+          color2: d["Color 2"],
           nickname: d["Nickname"],
           cur_conf: d["Current Conference"],
+          cur_div: d["Current Division"],
           first: parseFloat(d[start]),
 		  first_pos: parseFloat(d["X " + start]),
           second: parseFloat(d[start+1]),
@@ -122,6 +150,9 @@ d3.csv("rankings.csv", function(csv) {
 		  fourth_pos: parseFloat(d["X " + (start+3)]),
           fifth: parseFloat(d[start+4]),
 		  fifth_pos: parseFloat(d["X " + (start+4)]),
+          clickWins: d["W "+click],
+          clickLosses: d["L "+click],
+          clickTies: d["T "+click],
         };
         return r;
       })
@@ -142,25 +173,74 @@ d3.csv("rankings.csv", function(csv) {
     var School = chart.selectAll("g.School")
       .data( data );
     School.enter().append("g")
-      .attr("class", "School");
+      .attr("class", function(d,i) { return "School"});
+
+    
     School
+      .attr("class", function(d,i) { return "School "+ d.cur_conf})
       .on("mouseover", function(d,i) { 
         d3.select(this).classed("over", true); 
         
         var currentSchool = this;
         d3.selectAll("g.School").style("opacity",function(){
-          return  (this === currentSchool) ? 1 : 0.3;
+          var op=0.3
+          if(filter_state==1){
+            op=0.1;
+          }
+          return  (this === currentSchool) ? 1 : op;
         });
       })
       .on("mouseout",  function(d,i) { 
         d3.select(this).classed("over", false); 
         d3.selectAll("text.label.second, text.label.first").transition().duration(500).style("opacity",1);
-        d3.selectAll("g.School").style("opacity",1);
+        if(filter_state==1){
+          d3.selectAll("g.School").style("opacity",0.1);
+          d3.selectAll("."+filt).style("opacity","1");
+        }else{
+          d3.selectAll("g.School").style("opacity",1);
+        }
       });
     School.on("click",function(d,i){
+       update(year1,currentYear)
+      $("#dod-wrapper").show();
       d3.select("#school-name").text(d.label);
       d3.select("#nickname").text(d.nickname);
       d3.select("#cur_conf").text(d.cur_conf);
+      d3.select("#cur_div").text(d.cur_div);
+      d3.select(".slider-close").style("background-color",d.color);
+      var currentYear = 0;
+      var currentPos=0;
+      var coordinates = [0, 0];
+      coordinates = d3.mouse(this);
+      var x = coordinates[0];
+      if(x>30 && x<168){
+        currentYear = year1;
+
+        currentPos = d.first_pos;
+      }
+      else if(x>240 && x<379){
+        currentYear = year2;
+        currentPos = d.second_pos;
+      }
+      else if(x>450 && x<590){
+        currentYear = year3;
+        currentPos = d.third_pos;
+      }
+      else if(x>660 && x<800){
+        currentYear = year4;
+        currentPos = d.fourth_pos;
+      }
+      else if(x>870 && x<1010){
+        currentYear = year5;
+        currentPos = d.fifth_pos;
+      }
+      update(year1,currentYear);
+      d3.select("#school-year").text(currentYear);
+      d3.select("#school-rank").text(currentPos+" ");
+      d3.select("#school-color1").style("background",d.color);
+      d3.select("#school-color2").style("background",d.color2);
+      d3.select("#school-wins").text(d.clickWins);
+      d3.select("#school-losses").text(d.clickLosses);
 
 
     });
@@ -267,6 +347,7 @@ d3.csv("rankings.csv", function(csv) {
       .attr("y", function(d,i) { return d.fourth ? slope(d.fourth_pos)/ui_scale-4: -1000;}) 
       .attr("width",column_width+10)
       .attr("height",rect_height)
+      .attr("year",year4)
       .attr("fill", function(d) { return d.color;});
 
       var fourth_column = School.selectAll("text.label.fourth")
@@ -345,8 +426,8 @@ d3.csv("rankings.csv", function(csv) {
                 return "red";
             }
       })
-      .attr("y1", function(d,i) { return d.first && d.second ? Math.round( slope(d.first)/ui_scale - font_size/2 + 2)+10 : -1000; })
-      .attr("y2", function(d,i) { return d.first && d.second ? Math.round( slope(d.second)/ui_scale   - font_size/2 + 2)+10 : -1000; });
+      .attr("y1", function(d,i) { return d.first && d.second ? Math.round( slope(d.first_pos)/ui_scale - font_size/2 + 2)+10 : -1000; })
+      .attr("y2", function(d,i) { return d.first && d.second ? Math.round( slope(d.second_pos)/ui_scale   - font_size/2 + 2)+10 : -1000; });
     
     var line2 = School.selectAll("line.slope2")
       .data( function(d) { return [d]; } );
@@ -372,8 +453,8 @@ d3.csv("rankings.csv", function(csv) {
                 return "red";
             }
       })
-      .attr("y1", function(d,i) { return d.second && d.third ? Math.round( slope(d.second)/ui_scale - font_size/2 + 2) +10 : -1000; })
-      .attr("y2", function(d,i) { return d.second && d.third ? Math.round( slope(d.third)/ui_scale - font_size/2 + 2) +10 : -1000; });
+      .attr("y1", function(d,i) { return d.second && d.third ? Math.round( slope(d.second_pos)/ui_scale - font_size/2 + 2) +10 : -1000; })
+      .attr("y2", function(d,i) { return d.second && d.third ? Math.round( slope(d.third_pos)/ui_scale - font_size/2 + 2) +10 : -1000; });
 
     var line3 = School.selectAll("line.slope3")
       .data( function(d) { return [d]; } );
@@ -399,8 +480,8 @@ d3.csv("rankings.csv", function(csv) {
                 return "red";
             }
       })
-      .attr("y1", function(d,i) { return d.third && d.fourth ? Math.round( slope(d.third)/ui_scale - font_size/2 + 2) +10 : -1000; })
-      .attr("y2", function(d,i) { return d.third && d.fourth ? Math.round( slope(d.fourth)/ui_scale   - font_size/2 + 2) +10 : -1000; });
+      .attr("y1", function(d,i) { return d.third && d.fourth ? Math.round( slope(d.third_pos)/ui_scale - font_size/2 + 2) +10 : -1000; })
+      .attr("y2", function(d,i) { return d.third && d.fourth ? Math.round( slope(d.fourth_pos)/ui_scale   - font_size/2 + 2) +10 : -1000; });
 
       var line4 = School.selectAll("line.slope4")
       .data( function(d) { return [d]; } );
@@ -426,8 +507,8 @@ d3.csv("rankings.csv", function(csv) {
                 return "red";
             }
       })
-      .attr("y1", function(d,i) { return d.fourth && d.fifth ? Math.round( slope(d.fourth)/ui_scale - font_size/2 + 2) +10 : -1000; })
-      .attr("y2", function(d,i) { return d.fourth && d.fifth ? Math.round( slope(d.fifth)/ui_scale   - font_size/2 + 2) +10 : -1000; });
+      .attr("y1", function(d,i) { return d.fourth && d.fifth ? Math.round( slope(d.fourth_pos)/ui_scale - font_size/2 + 2) +10 : -1000; })
+      .attr("y2", function(d,i) { return d.fourth && d.fifth ? Math.round( slope(d.fifth_pos)/ui_scale   - font_size/2 + 2) +10 : -1000; });
       
       return chart;
     };
@@ -453,27 +534,96 @@ d3.csv("rankings.csv", function(csv) {
       return update( d3.select("#first").text(), d3.select("#second").text() );
     });
 
-    //var startPos = '$("#slider").slider("value");', endPos = '';
-    d3.select('#slider').call(d3.slider().axis(true).min(1936).max(2013).step(1).on("slide", function(evt, value) {
+
+    d3.select('#slider').call(d3.slider().axis(true).min(1936).max(2009).value(2009).step(1).on("slide", function(evt, value) {
       d3.select('#slider3textmin').text(value);
-      update(value); 
+      update(value,value); 
+      if(filter_state==1){
+        d3.selectAll("g.School").style("opacity",0.1);
+        d3.selectAll("g.School").style("pointer-events","none");
+        d3.selectAll("."+filt).style("opacity","1");
+        d3.selectAll("."+filt).style("pointer-events","all");
+      }else{
+        d3.selectAll("g.School").style("opacity",1);
+        d3.selectAll("g.School").style("pointer-events","all");
+      }
     }));
 
-     d3.select('.d3-slider-handle').append("div").attr("id","slider3textmin").attr("class","tooltip").text(1936);
+     d3.select('.d3-slider-handle').append("div").attr("id","slider3textmin").attr("class","tooltip").text(2009);
 
+    d3.select("#conf-select").on("change", function(){
+      filt=this.value;
+      if(filt==""){
+
+        d3.selectAll("g.School").style("opacity",1);
+        d3.selectAll("g.School").style("pointer-events","all");
+        filter_state=0;
+      }else{
+        filter_state=1;
+      d3.selectAll("g.School").style("opacity",0.1);
+      d3.selectAll("g.School").style("pointer-events","none");
+      d3.selectAll("."+filt).style("opacity","1");
+      d3.selectAll("."+filt).style("pointer-events","all");
+      }
+    });
     
-    return update( 1936);
+    return update( 2009,1936);
+});
+$(document).ready(function(){
+  var state=1;
+  $(".slider-close").click(function(){
+    if(state==0){
+    $("#dod-wrapper").css("right","0px");
+    state=1;
+
+  }else{
+    $("#dod-wrapper").css("right","-320px");
+    state=0;
+  }
+  });
 });
 </script>
 <div id="dod-wrapper">
+  <div class="slider-close"></div>
   <div id="dod">
-    <!--<div class="slider-close"></div>-->
-    <h1><div id="school-name"></div>
+
+    
+    <h1><div id="school-year"></div>#<span id="school-rank"></span><span id="school-name"></span>
     <div id="nickname"></div></h1> 
-    <div id="">Current Conference: <span id="cur_conf"></span></div>
+    <div><h2><span id="school-wins">2</span> - <span id="school-losses"></span></h2></div>
+
+    <div class="team-info"><h2>Team Information</h2>  
+      <div id="" class="row">Team Colors: <div id="school-color1" class="color-box"></div><div id="school-color2" class="color-box"></div></div>
+      <div id="" class="row">Current Conference: <span id="cur_conf"></span></div>
+      <div id="" class="row">Current Division: <span id="cur_div"></span></div>
+      <div id="" class="row">Highest Ranking: <span id="highest_rank"></span></div>
+      <div id="" class="row">Number of Times in Rankings: <span id="rank_count"></span></div>
+    </div>
   </div>
 </div>
   <div id="slider"></div>
-  <div id="fail-slide">**The Visualization can only handle up to 6 years at one time.</div>
+  <div class="conference-filter">
+  <span>Filter by Conference: </span>
+    <select id="conf-select">
+      <option value=""></option>
+      <option value="AAC">AAC</option>
+      <option value="ACC">ACC</option>
+      <option value="ASC">ASC</option>
+      <option value="Big 12">Big 12</option>
+      <option value="Big South">Big South</option>
+      <option value="Big Ten">Big Ten</option>
+      <option value="CAA">CAA</option>
+      <option value="Centennial">Centennial</option>
+      <option value="C-USA">C-USA</option>
+      <option value="Independent">Independent</option>
+      <option value="Ivy">Ivy</option>
+      <option value="MAC">MAC</option>
+      <option value="MWC">MWC</option>
+      <option value="NA">N/A</option>
+      <option value="NEC">NEC</option>
+      <option value="Pac-12">Pac-12</option>
+      <option value="SEC">SEC</option>
+    </select>
+  </div>
 
 </html>
